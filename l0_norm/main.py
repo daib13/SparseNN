@@ -6,7 +6,7 @@ import os
 
 
 def train_model(model, sess, writer, x, y, num_epoch, batch_size=100, lr=0.001):
-    iteration_per_epoch = math.floor(int(x.shape[0] / batch_size))
+    iteration_per_epoch = int(math.floor(x.shape[0] / batch_size))
     for epoch in range(num_epoch):
         x, y = shuffle_data(x, y)
         total_loss = 0
@@ -29,7 +29,7 @@ def main():
 
         train_model(model, sess, writer, x_train, y_train, 200)
 
-        count1, count2, count3 = model.pruned_structure()
+        count1, count2, count3 = model.pruned_structure(sess)
         print('Prunced structure: {0}-{1}-{2}.'.format(count1, count2, count3))
 
 
