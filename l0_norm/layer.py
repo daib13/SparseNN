@@ -31,4 +31,4 @@ def dense_l0(name, x, output_channel, reg=None, bias=False, init_dropout_ratio=0
         if activation_fn is not None:
             y = activation_fn(y, name='output_activate')
         l0_penalty = tf.nn.sigmoid(log_alpha + bgz, 'l0_penalty')
-    return y, l0_penalty
+    return y, l0_penalty, log_alpha
