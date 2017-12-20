@@ -6,7 +6,7 @@ import math
 PROTECTOR = 0.00001
 
 
-def dense_l0(name, x, output_channel, reg=None, bias=False, init_dropout_ratio=0.5, beta=2.0/3.0, gamma=-0.1, zeta=1.1, activation_fn=None):
+def dense_l0(name, x, phase, output_channel, reg=None, bias=False, init_dropout_ratio=0.5, beta=2.0/3.0, gamma=-0.1, zeta=1.1, activation_fn=None):
     input_channel = int(x.get_shape()[-1])
     assert len(x.get_shape()) == 2
     beta_inv = 1.0 / beta
@@ -17,11 +17,16 @@ def dense_l0(name, x, output_channel, reg=None, bias=False, init_dropout_ratio=0
         if bias:
             b = tf.get_variable('b', [output_channel], tf.float32, tf.zeros_initializer())
     with tf.name_scope(name):
-        u = tf.random_uniform([input_channel, 1], PROTECTOR, 1.0 - PROTECTOR, tf.float32, name='u')
-        alpha = tf.minimum(PROTECTOR, tf.exp(log_alpha), 'alpha')
-        s = tf.divide(1.0, 1.0 + tf.pow((1.0 - u)/u/alpha, beta_inv), name='s')
-        s_bar = s * (zeta - gamma) + gamma
-        z = tf.minimum(tf.maximum(s_bar, 0.0), 1.0, 'z')
+        alpha = tf.maximum(PROTECTOR, tf.exp(log_alpha), 'alpha')
+        if phase == 'TRAIN':
+            u = tf.random_uniform([input_channel, 1], PROTECTOR, 1.0 - PROTECTOR, tf.float32, name='u')    
+            s = tf.divide(1.0, 1.0 + tf.pow((1.0 - u)/u/alpha, beta_inv), name='s')
+            s_bar = s * (zeta - gamma) + gamma
+            z = tf.minimum(tf.maximum(s_bar, 0.0), 1.0, 'z')
+            l0_penalty = tf.nn.sigmoid(log_alpha + bgz, 'l0_penalty')
+        else:
+            z = tf.minimum(tf.maximum(alpha/(1 + alpha)*(zeta - gamma) + gamma, 0.0), 1.0, 'z')
+            l0_penalty = z
         z_tile = tf.tile(z, [1, output_channel], 'z_tile')
         w_gated = tf.multiply(w, z_tile, 'w_gated')
         if bias:
@@ -30,5 +35,4 @@ def dense_l0(name, x, output_channel, reg=None, bias=False, init_dropout_ratio=0
             y = tf.matmul(x, w_gated, name='output')
         if activation_fn is not None:
             y = activation_fn(y, name='output_activate')
-        l0_penalty = tf.nn.sigmoid(log_alpha + bgz, 'l0_penalty')
-    return y, l0_penalty, log_alpha
+    return y, l0_penalty
