@@ -26,7 +26,7 @@ def klloss(name, mu_z, logsd_z, sd_z, prior_type='Gaussian'):
     assert len(mu_z.get_shape()) == 2
     assert len(logsd_z.get_shape()) == 2
     assert len(sd_z.get_shape()) == 2
-    if prior_type = 'Gaussian':
+    if prior_type == 'Gaussian':
         with tf.name_scope(name):
             loss = tf.reduce_sum((tf.square(mu_z) + tf.square(sd_z) - 1.0) / 2.0 - logsd_z, -1)
     else:
