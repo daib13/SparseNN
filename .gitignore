@@ -3,3 +3,6 @@ data/MNIST*
 *pyc
 model*
 graph*
+log*
+experiment*
+result.txt

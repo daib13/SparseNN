@@ -13,7 +13,8 @@ def dense_l0(name, x, phase, output_channel, reg=None, bias=False, init_dropout_
     bgz = -beta * math.log(-gamma / zeta)
     with tf.variable_scope(name + '_w'):
         w = tf.get_variable('w', [input_channel, output_channel], tf.float32, layers.xavier_initializer(), reg)
-        log_alpha = tf.get_variable('log_alpha', [input_channel, 1], tf.float32, tf.random_normal_initializer(tf.log(init_dropout_ratio / (1.0 - init_dropout_ratio)), 0.01))
+#        log_alpha = tf.get_variable('log_alpha', [input_channel, 1], tf.float32, tf.random_normal_initializer(tf.log(init_dropout_ratio / (1.0 - init_dropout_ratio)), 0.01))
+        log_alpha = tf.get_variable('log_alpha', [input_channel, 1], tf.float32, tf.random_normal_initializer(tf.log(init_dropout_ratio), 1.0, dtype=tf.float32))
         if bias:
             b = tf.get_variable('b', [output_channel], tf.float32, tf.zeros_initializer())
     with tf.name_scope(name):
@@ -36,3 +37,20 @@ def dense_l0(name, x, phase, output_channel, reg=None, bias=False, init_dropout_
         if activation_fn is not None:
             y = activation_fn(y, name='output_activate')
     return y, l0_penalty
+
+
+def dense(name, x, output_channel, reg=None, bias=False, activation_fn=None):
+    input_channel = int(x.get_shape())[-1]
+    assert len(x.get_shape()) == 2
+    with tf.variable_scope(name + '_w'):
+        w = tf.get_variable('w', [input_channel, output_channel], tf.float32, layers.xavier_initializer(), reg)
+        if bias:
+            b = tf.get_variable('b', [output_channel], tf.float32, tf.zeros_initializer())
+    with tf.name_scope(name):
+        if bias:
+            y = tf.nn.bias_add(tf.matmul(x, w), b, name='output')
+        else:
+            y = tf.matmul(x, w, name='output')
+        if activation_fn is not None:
+            y = activation_fn(y, name='output_activate')
+    return y
