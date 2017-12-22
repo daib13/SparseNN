@@ -14,11 +14,11 @@ def dense(name, x, output_channel, bias=True, reg=None, activation_fn=None):
     with tf.name_scope(name):
         if len(x.get_shape()) != 2:
             x = tf.reshape(x, [-1, input_channel], name='reshape')
-            y = tf.matmul(x, w, name='prod')
-            if bias:
-                y = tf.nn.bias_add(y, b, name='sum')
-            if activation_fn is not None:
-                y = activation_fn(y, name='act')
+        y = tf.matmul(x, w, name='prod')
+        if bias:
+            y = tf.nn.bias_add(y, b, name='sum')
+        if activation_fn is not None:
+            y = activation_fn(y, name='act')
     return y
 
 

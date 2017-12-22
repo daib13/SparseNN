@@ -28,7 +28,7 @@ def test_model(model, sess, x):
     for i in range(num_iteration):
         x_batch = x[i*batch_size:(i+1)*batch_size, :]
         batch_mu_z, batch_sd_z = model.extract_latent(sess, x_batch)
-        mu_z.append(batch_size)
+        mu_z.append(batch_mu_z)
         sd_z.append(batch_sd_z)
     mu_z = np.concatenate(mu_z, 0)
     sd_z = np.concatenate(sd_z, 0)
@@ -50,10 +50,11 @@ def main():
         writer = tf.summary.FileWriter('graph', sess.graph)
         sess.run(tf.global_variables_initializer())
 
-        train_model(model, sess, writer, x_train, 20, 100, 0.001)
-        if not os.path.exists('model'):
-            os.mkdir('model')
-        saver.save(sess, 'model/model')
+#        train_model(model, sess, writer, x_train, 20, 100, 0.001)
+#        if not os.path.exists('model'):
+#            os.mkdir('model')
+#        saver.save(sess, 'model/model')
+        saver.restore(sess, 'model/model')
 
         mu_z, sd_z = test_model(model, sess, x_train)
         mu_z_label = []

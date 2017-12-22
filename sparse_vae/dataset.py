@@ -6,7 +6,7 @@ def shuffle_data(x, y=None):
     idx = np.arange(x.shape[0])
     np.random.shuffle(idx)
     x = x[idx, :]
-    if y.any():
+    if y is not None:
         y = y[idx]
         return x, y
     else:

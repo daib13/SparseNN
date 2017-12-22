@@ -33,9 +33,12 @@ def main():
     x_train, y_train = load_mnist_data('training')
     x_test, y_test = load_mnist_data('testing')
 
-    fid = open('result.txt', 'wt')
-    for i in range(0, 5):
-        alpha = 0.2*i + 0.1
+    fid = open('result.txt', 'a')
+    for i in range(5, 9):
+        if i < 5:
+            alpha = 0.2*i + 0.1
+        else:
+            alpha = 2.0*i - 7.0
         model = lenet300('TRAIN', alpha)
 
         with tf.Session() as sess:
@@ -52,13 +55,13 @@ def main():
         with tf.Session() as sess:
             saver = tf.train.Saver()
             saver.restore(sess, 'model/model' + str(i))
-            count1, count2, count3 = model.pruned_structure(sess)
+            count1, count2, count3 = model.pruned_structure(sess, 0.005)
             print('Prunced structure: {0}-{1}-{2}.'.format(count1, count2, count3))
             train_acc = test_model(model, sess, x_train, y_train)
             test_acc = test_model(model, sess, x_test, y_test)
             print('Train accuracy = {0}.'.format(train_acc))
             print('Test accuracy = {0}.'.format(test_acc))
-            fid.write('{0}\t{1}\t{2}\t{3}\t{4}\t{5}'.format(alpha, count1, count2, count3, train_acc, test_acc))
+            fid.write('{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n'.format(alpha, count1, count2, count3, train_acc, test_acc))
         
         tf.reset_default_graph()
     fid.close()

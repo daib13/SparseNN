@@ -60,6 +60,8 @@ class SparseVae:
                 self.gen_loss = tf.reduce_mean(self.gen_dis)
             self.loss = self.kl_loss + self.gen_loss
             tf.summary.scalar('loss', self.loss)
+            tf.summary.histogram('sd_z', self.sd_z)
+            tf.summary.histogram('mu_z', self.mu_z)
             self.summary = tf.summary.merge_all()
 
         with tf.name_scope('optimizer'):
