@@ -1,6 +1,9 @@
 from vgg import vgg
 from dataset import make_cifar10_dataset, shuffle_data
 import math
+import tensorflow as tf 
+import os
+import sys
 
 
 def train_model(model, x, y, sess, writer, num_epoch, batch_size=100, lr=0.001):
@@ -18,8 +21,43 @@ def train_model(model, x, y, sess, writer, num_epoch, batch_size=100, lr=0.001):
         print('Epoch = {0}, loss = {1}, accuracy = {2}.'.format(epoch, total_loss, accuracy))
 
 
+def test_model(model, x, y, sess):
+    num_iteration = int(math.ceil(x.shape[0]/100))
+    total_accuracy = 0.0
+    for i in range(num_iteration):
+        batch_x = x[i*100:(i+1)*100, :, :, :]
+        batch_y = y[i*100:(i+1)*100, :]
+        batch_accuracy = model.test(batch_x, batch_y, sess)
+        total_accuracy += batch_accuracy
+    total_accuracy /= num_iteration
+    return total_accuracy
+
+
 def main():
     x_train, y_train, x_test, y_test = make_cifar10_dataset()
 
+    if not os.path.exists('model_vgg'):
+        os.mkdir('model_vgg')
+
     model = vgg('TRAIN')
-    
+    with tf.Session() as sess:
+        saver = tf.train.Saver()
+        writer = tf.summary.FileWriter('graph_vgg', sess.graph)
+
+        train_model(model, x_train, y_train, sess, writer, 100)
+        saver.save(sess, 'model_vgg/model')
+
+    tf.reset_default_graph()
+    model = vgg('TEST')
+    with tf.Session() as sess:
+        saver = tf.train.Saver()
+        saver.restore(sess, 'model_vgg/model')
+
+        train_accuracy = test_model(model, x_train, y_train, sess)
+        test_accuracy = test_model(model, x_test, y_test, sess)
+        print('Train accuracy = {0}.\nTest accuracy = {1}.'.format(train_accuracy, test_accuracy))
+
+
+if __name__ == '__main__':
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    main()    

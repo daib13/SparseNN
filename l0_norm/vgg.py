@@ -54,7 +54,7 @@ class vgg:
             self.y_logit = tf.placeholder(tf.float32, [None, 10], 'y_logit')
             self.y = tf.arg_max(self.y_logit, -1, tf.int32, 'y')
         with tf.name_scope('loss'):           
-            self.loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(self.labels=self.y, logits=self.y_logit)) / self.batch_size
+            self.loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.y_logit)) / self.batch_size
         with tf.name_scope('accuracy'):
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.y_hat, self.y), tf.float32))
 
