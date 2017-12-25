@@ -1,5 +1,5 @@
 import tensorflow as tf 
-from lenet import lenet300
+from lenet import lenet300_layerwise
 import math
 from dataset import shuffle_data, load_mnist_data
 import os
@@ -32,41 +32,36 @@ def test_model(model, sess, x, y):
 def main():
     x_train, y_train = load_mnist_data('training')
     x_test, y_test = load_mnist_data('testing')
-
-    fid = open('result.txt', 'a')
-    for i in range(2, 3):
-        if i == 0:
-            alpha = 0.1
-        elif i == 2:
-            alpha = 1.0
-        else:
-            alpha = 10.0
-        model = lenet300('TRAIN', alpha)
+        
+    fid = open('accuracy_stage.txt', 'w')
+    for stage in range(-1, 3):
+        model = lenet300_layerwise('TRAIN', stage, math.log(0.1))
 
         with tf.Session() as sess:
-            saver = tf.train.Saver()
-            writer = tf.summary.FileWriter('graph_' + str(i), sess.graph)
+            saver = tf.train.Saver(model.all_weights)
+            writer = tf.summary.FileWriter('graph_stage', sess.graph)
             sess.run(tf.global_variables_initializer())
+            if stage >= 0:
+                saver.restore(sess, 'model/model_stage' + str(stage))
 
-            train_model(model, sess, writer, x_train, y_train, 200)
-            saver.save(sess, 'model/model_' + str(i))
+            train_model(model, sess, writer, x_train, y_train, 100)
+            saver.save(sess, 'model/model_stage' + str(stage + 1))
 
         tf.reset_default_graph()
-        model = lenet300('TEST')
-
+        
+        model = lenet300_layerwise('TEST', stage)
         with tf.Session() as sess:
-            saver = tf.train.Saver()
-            saver.restore(sess, 'model/model_' + str(i))
+            saver = tf.train.Saver(model.all_weights)
+            saver.restore(sess, 'model/model_stage' + str(stage + 1))
             count1, count2, count3 = model.pruned_structure(sess, 0.005)
             print('Prunced structure: {0}-{1}-{2}.'.format(count1, count2, count3))
             train_acc = test_model(model, sess, x_train, y_train)
             test_acc = test_model(model, sess, x_test, y_test)
             print('Train accuracy = {0}.'.format(train_acc))
             print('Test accuracy = {0}.'.format(test_acc))
-            fid.write('{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n'.format(alpha, count1, count2, count3, train_acc, test_acc))
+            fid.write('{0}\t{1}\t{2}\t{3}\t{4}\n'.format(count1, count2, count3, train_acc, test_acc))
         
         tf.reset_default_graph()
-    fid.close()
 
 
 if __name__ == '__main__':

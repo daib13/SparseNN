@@ -6,3 +6,5 @@ graph*
 log*
 experiment*
 result.txt
+accuracy_stage.txt
+data/cifar-10-batches-py*
