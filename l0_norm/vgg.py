@@ -86,6 +86,10 @@ class vgg_l0:
     def __build_network(self):
         with tf.name_scope('x'):
             self.x = tf.placeholder(tf.float32, [None, 32, 32, 3], 'x')
+            if self.phase == 'TRAIN':
+                reverse = tf.random_uniform([], 0.0, 1.0)
+                if tf.less(reverse, 0.5):
+                    self.x = tf.reverse(self.x, 2)
             self.batch_size = tf.shape(self.x, out_type=tf.int32)[0]
 
         self.conv1_1, self.l0_penalty_conv1_1 = conv_l0_bn_relu('conv1_1', self.x, 64, self.phase, init_log_alpha=self.init_log_alpha)
@@ -150,6 +154,25 @@ class vgg_l0:
         with tf.name_scope('accuracy'):
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.y_hat, self.y), tf.float32))
 
+        with tf.name_scope('prune'):
+            self.threshold = tf.placeholder(tf.float32, [], 'threshold')
+            self.count_conv1_1 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv1_1, self.threshold), tf.float32))
+            self.count_conv1_2 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv1_2, self.threshold), tf.float32))
+            self.count_conv2_1 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv2_1, self.threshold), tf.float32))
+            self.count_conv2_2 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv2_2, self.threshold), tf.float32))
+            self.count_conv3_1 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv3_1, self.threshold), tf.float32))
+            self.count_conv3_2 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv3_2, self.threshold), tf.float32))
+            self.count_conv3_3 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv3_3, self.threshold), tf.float32))
+            self.count_conv4_1 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv4_1, self.threshold), tf.float32))
+            self.count_conv4_2 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv4_2, self.threshold), tf.float32))
+            self.count_conv4_3 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv4_3, self.threshold), tf.float32))
+            self.count_conv5_1 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv5_1, self.threshold), tf.float32))
+            self.count_conv5_2 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv5_2, self.threshold), tf.float32))
+            self.count_conv5_3 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_conv5_3, self.threshold), tf.float32))
+            self.count_fc1 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_fc1, self.threshold), tf.float32))
+            self.count_fc2 = tf.reduce_sum(tf.cast(tf.greater(self.l0_penalty_fc2, self.threshold), tf.float32))
+            self.structure = [self.count_conv1_1, self.count_conv1_2, self.count_conv2_1, self.count_conv2_2, self.count_conv3_1, self.count_conv3_2, self.count_conv3_3, self.count_conv4_1, self.count_conv4_2, self.count_conv4_3, self.count_conv5_1, self.count_conv5_2, self.count_conv5_3, self.count_fc1, self.count_fc2]
+
         tf.summary.scalar('loss', self.loss)
         tf.summary.scalar('ce_loss', self.ce_loss)
         tf.summary.scalar('l0_loss', self.l0_loss)
@@ -199,3 +222,7 @@ class vgg_l0:
     def test(self, x, y, sess):
         accuracy = sess.run(self.accuracy, feed_dict={self.x: x, self.y_logit: y})
         return accuracy
+
+    def pruned_structure(self, sess, threshold=0.05):
+        structure = sess.run(self.structure, feed_dict={self.threshold: threshold})
+        return structure

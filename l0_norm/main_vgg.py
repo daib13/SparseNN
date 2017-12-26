@@ -33,13 +33,14 @@ def test_model(model, x, y, sess):
     return total_accuracy
 
 
-def main():
+def main(lambdaa, init_log_alpha):
     x_train, y_train, x_test, y_test = make_cifar10_dataset()
 
     if not os.path.exists('model_vgg_l0'):
         os.mkdir('model_vgg_l0')
 
-    model = vgg_l0('TRAIN')
+#    model = vgg_l0('TRAIN', lambdaa, init_log_alpha)
+    model = vgg('TRAIN')
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
@@ -49,7 +50,9 @@ def main():
         saver.save(sess, 'model_vgg_l0/model')
 
     tf.reset_default_graph()
-    model = vgg_l0('TEST')
+#    model = vgg_l0('TEST')
+    model = vgg('TEST')
+#    fid = open('result.txt', 'wt')
     with tf.Session() as sess:
         saver = tf.train.Saver()
         saver.restore(sess, 'model_vgg_l0/model')
@@ -57,8 +60,15 @@ def main():
         train_accuracy = test_model(model, x_train, y_train, sess)
         test_accuracy = test_model(model, x_test, y_test, sess)
         print('Train accuracy = {0}.\nTest accuracy = {1}.'.format(train_accuracy, test_accuracy))
+#        structure = model.pruned_structure(sess)
+#        for num_neuron in structure:
+#            fid.write('{0}\n'.format(num_neuron))
+#        fid.write('\n{0}\n{1}'.format(train_accuracy, test_accuracy))
+#    fid.close()
 
 
 if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    main()    
+    lambdaa = float(sys.argv[1])
+    init_log_alpha = math.log(float(sys.argv[2]))
+    os.environ['CUDA_VISIBLE_DEVICES'] = sys.argv[3]
+    main(lambdaa, init_log_alpha)    
