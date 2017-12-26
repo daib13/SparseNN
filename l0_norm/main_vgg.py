@@ -1,4 +1,4 @@
-from vgg import vgg
+from vgg import vgg, vgg_l0
 from dataset import make_cifar10_dataset, shuffle_data
 import math
 import tensorflow as tf 
@@ -36,22 +36,23 @@ def test_model(model, x, y, sess):
 def main():
     x_train, y_train, x_test, y_test = make_cifar10_dataset()
 
-    if not os.path.exists('model_vgg'):
-        os.mkdir('model_vgg')
+    if not os.path.exists('model_vgg_l0'):
+        os.mkdir('model_vgg_l0')
 
-    model = vgg('TRAIN')
+    model = vgg_l0('TRAIN')
     with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
-        writer = tf.summary.FileWriter('graph_vgg', sess.graph)
+        writer = tf.summary.FileWriter('graph_vgg_l0', sess.graph)
 
         train_model(model, x_train, y_train, sess, writer, 100)
-        saver.save(sess, 'model_vgg/model')
+        saver.save(sess, 'model_vgg_l0/model')
 
     tf.reset_default_graph()
-    model = vgg('TEST')
+    model = vgg_l0('TEST')
     with tf.Session() as sess:
         saver = tf.train.Saver()
-        saver.restore(sess, 'model_vgg/model')
+        saver.restore(sess, 'model_vgg_l0/model')
 
         train_accuracy = test_model(model, x_train, y_train, sess)
         test_accuracy = test_model(model, x_test, y_test, sess)
