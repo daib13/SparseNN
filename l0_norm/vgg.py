@@ -69,7 +69,9 @@ class vgg:
         with tf.name_scope('accuracy'):
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.y_hat, self.y), tf.float32))
 
-        self.summary = tf.summary.scalar('loss', self.loss)
+        tf.summary.scalar('ce_loss', self.loss)
+        tf.summary.scalar('loss', self.loss)
+        self.summary = tf.summary.merge_all()
         
         with tf.name_scope('optimizer'):
             self.lr = tf.placeholder(tf.float32, [], 'lr')
@@ -97,10 +99,6 @@ class vgg_l0:
     def __build_network(self):
         with tf.name_scope('x'):
             self.x = tf.placeholder(tf.float32, [None, 32, 32, 3], 'x')
-            if self.phase == 'TRAIN':
-                reverse = tf.random_uniform([], 0.0, 1.0)
-                if tf.less(reverse, 0.5):
-                    self.x = tf.reverse(self.x, 2)
             self.batch_size = tf.shape(self.x, out_type=tf.int32)[0]
 
         self.conv1_1, self.l0_penalty_conv1_1 = conv_l0_bn_relu('conv1_1', self.x, 64, self.phase, init_log_alpha=self.init_log_alpha)
