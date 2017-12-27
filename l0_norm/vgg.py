@@ -13,7 +13,7 @@ class vgg:
             self.dim = dim
             self.dropout = [None] * 16
         assert len(self.dim) == 15
-        assert self.dropout == 16
+        assert len(self.dropout) == 16
         self.__build_network()
 
     def __build_network(self):

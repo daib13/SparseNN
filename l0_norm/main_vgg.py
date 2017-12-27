@@ -39,8 +39,9 @@ def main(lambdaa, init_log_alpha):
     if not os.path.exists('model_vgg_l0'):
         os.mkdir('model_vgg_l0')
 
+    dim = [64, 64, 128, 128, 256, 256, 256, 512, 508, 449, 245, 181, 132, 48, 84]
 #    model = vgg_l0('TRAIN', lambdaa, init_log_alpha)
-    model = vgg('TRAIN')
+    model = vgg('TRAIN', dim)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
@@ -51,7 +52,7 @@ def main(lambdaa, init_log_alpha):
 
     tf.reset_default_graph()
 #    model = vgg_l0('TEST')
-    model = vgg('TEST')
+    model = vgg('TEST', dim)
 #    fid = open('result.txt', 'wt')
     with tf.Session() as sess:
         saver = tf.train.Saver()
