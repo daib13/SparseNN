@@ -67,6 +67,7 @@ def conv_l0(name, x, phase, output_channel, kernel_size=3, reg=None, init_log_al
 
 
 def conv_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None):
+    is_train = (phase == 'TRAIN')
     input_channel = int(x.get_shape()[-1])
     assert len(x.get_shape()) == 4
     with tf.variable_scope(name + '_w'):
@@ -85,6 +86,7 @@ def conv_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None)
 
 
 def conv_l0_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, init_log_alpha=-2.3):
+    is_train = (phase == 'TRAIN')
     y, l0_penalty = conv_l0(name + '/conv', x, phase, output_channel, kernel_size=3, reg=reg, init_log_alpha=init_log_alpha)
     with tf.name_scope(name):
         y = layers.batch_norm(y)
@@ -93,6 +95,7 @@ def conv_l0_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, init_log_a
 
 
 def fc_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None):
+    is_train = (phase == 'TRAIN')
     input_channel = int(x.get_shape()[-1])
     assert len(x.get_shape()) == 2
     with tf.variable_scope(name + '_w'):
@@ -111,6 +114,7 @@ def fc_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None):
 
 
 def fc_l0_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, init_log_alpha=-2.3):
+    is_train = (phase == 'TRAIN')
     y, l0_penalty = dense_l0(name + '/fc', x, phase, output_channel, reg, True, init_log_alpha)
     with tf.name_scope(name):
         y = layers.batch_norm(y)
