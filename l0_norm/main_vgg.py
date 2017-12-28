@@ -8,12 +8,25 @@ from preprocess import preprocess
 import numpy as np
 
 
-def train_model(model, x, x2, y, y2, sess, writer, num_epoch, batch_size=100, lr=0.001):
+def test_model(model, x, y, sess):
+    num_iteration = int(math.ceil(x.shape[0]/500))
+    total_accuracy = 0.0
+    for i in range(num_iteration):
+        batch_x = x[i*500:(i+1)*500, :, :, :]
+        batch_y = y[i*500:(i+1)*500, :]
+        batch_accuracy = model.test(batch_x, batch_y, sess)
+        total_accuracy += batch_accuracy
+    total_accuracy /= num_iteration
+    return total_accuracy
+
+
+def train_model(model, x, x2, y, y2, sess, writer, num_epoch, flog, batch_size=100, lr=0.05):
     iteration_per_epoch = int(math.floor(x.shape[0]/batch_size))
     x_reverse = np.flip(x, 2)
     x_train = np.concatenate([x, x_reverse], 0)
     y_train = np.concatenate([y, y], 0)
-    print('{0:8s}\t{1:8s}\t{2:8s}\t{3:8s}'.format('Epoch', 'Loss', 'Acc1', 'Acc2'))
+    print('{0:8s}\t{1:8s}\t{2:8s}\t{3:8s}\t{4:8s}'.format('Epoch', 'Lr', 'Loss', 'Acc1', 'Acc2'))
+    flog.write('{0:8s}\t{1:8s}\t{2:8s}\t{3:8s}\t{4:8s}'.format('Epoch', 'Lr', 'Loss', 'Acc1', 'Acc2'))
     for epoch in range(num_epoch):
         total_loss = 0
         shuffle_data(x_train, y_train)
@@ -25,21 +38,14 @@ def train_model(model, x, x2, y, y2, sess, writer, num_epoch, batch_size=100, lr
         total_loss /= iteration_per_epoch
         train_accuracy = model.test(x_train[0:100, :, :, :], y[0:100, :], sess)
         test_accuracy = model.test(x2[0:500, :, :, :], y2[0:500, :], sess)
-        print('{0:8d}\t{1:8.4f}\t{2:8.4f}\t{3:8.4f}'.format(epoch, total_loss, train_accuracy, test_accuracy))
-        if epoch % 20 == 19:
-            lr *= 0.3
-
-
-def test_model(model, x, y, sess):
-    num_iteration = int(math.ceil(x.shape[0]/100))
-    total_accuracy = 0.0
-    for i in range(num_iteration):
-        batch_x = x[i*100:(i+1)*100, :, :, :]
-        batch_y = y[i*100:(i+1)*100, :]
-        batch_accuracy = model.test(batch_x, batch_y, sess)
-        total_accuracy += batch_accuracy
-    total_accuracy /= num_iteration
-    return total_accuracy
+        print('{0:8d}\t{1:8.4f}\t{2:8.4f}\t{3:8.4f}\t{4:8.4f}'.format(epoch, lr, total_loss, train_accuracy, test_accuracy))
+        flog.write('{0:8d}\t{1:8.4f}\t{2:8.4f}\t{3:8.4f}\t{4:8.4f}'.format(epoch, lr, total_loss, train_accuracy, test_accuracy))
+        if epoch % 30 == 29:
+            lr *= 0.5
+            train_accuracy = test_model(model, x, y, sess)
+            test_accuracy = test_model(model, x, y, sess)
+            print('{0:8s}\t{1:8s}\t{2:8s}\t{3:8.4f}\t{4:8.4f}'.format('--', '--', '--', train_accuracy, test_accuracy))
+            flog.write('{0:8s}\t{1:8s}\t{2:8s}\t{3:8.4f}\t{4:8.4f}'.format('--', '--', '--', train_accuracy, test_accuracy))
 
 
 def main(lambdaa=0.1, init_log_alpha=0.0):
@@ -113,16 +119,22 @@ def main2():
     if not os.path.exists('model'):
         os.mkdir('model')
     fid = open('result.txt', 'wt')
+    flog = open('log.txt', 'wt')
 
     # train l0 pruned model
-    model = vgg('TRAIN')
+    model = vgg('TRAIN', weight_decay=5e-4)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         writer = tf.summary.FileWriter('graph', sess.graph)
 
-        train_model(model, x_train, x_test, y_train, y_test, sess, writer, 50)
+        train_model(model, x_train, x_test, y_train, y_test, sess, writer, 150, flog)
         saver.save(sess, 'model/model')
+
+        train_accuracy = test_model(model, x_train, y_train, sess)
+        test_accuracy = test_model(model, x_test, y_test, sess)
+        print('Train accuracy = {0:8.4f}.\nTest accuracy = {1:8.4f}.'.format(train_accuracy, test_accuracy))
+        fid.write('{0:8.4f}\n{1:8.4f}'.format(train_accuracy, test_accuracy))
 
     # test l0 pruned model
     tf.reset_default_graph()
@@ -135,12 +147,13 @@ def main2():
         print('Train accuracy = {0:8.4f}.\nTest accuracy = {1:8.4f}.'.format(train_accuracy, test_accuracy))
         fid.write('{0:8.4f}\n{1:8.4f}'.format(train_accuracy, test_accuracy))
     fid.close()
+    flog.close()
 
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
-        main2()
         os.environ['CUDA_VISIBLE_DEVICES'] = sys.argv[1]
+        main2()      
     elif len(sys.argv) == 4:
         lambdaa = float(sys.argv[1])
         init_log_alpha = tf.log(float(sys.argv[2]))
