@@ -4,7 +4,7 @@ from layer import conv_bn_relu, fc_bn_relu, conv_l0_bn_relu, fc_l0_bn_relu
 
 
 class vgg:
-    def __init__(self, phase='TRAIN', dim=None, weight_decay=None):
+    def __init__(self, phase='TRAIN', dim=None, weight_decay=None, if_bn=True):
         self.phase = phase
         if dim is None:
             self.dim = [64, 64, 128, 128, 256, 256, 256, 512, 512, 512, 512, 512, 512, 512, 512]
@@ -18,34 +18,41 @@ class vgg:
             self.reg = layers.l2_regularizer(weight_decay)
         else:
             self.reg = None
+        self.if_bn = if_bn
         self.__build_network()
 
     def __build_network(self):
         with tf.name_scope('x'):
-            self.x = tf.placeholder(tf.float32, [None, 32, 32, 3], 'x')
-            self.batch_size = tf.shape(self.x, out_type=tf.int32)[0]
+            self.raw_x = tf.placeholder(tf.float32, [None, 32, 32, 3], 'x')
+            self.batch_size = tf.shape(self.raw_x, out_type=tf.int32)[0]
+            if self.phase == 'TRAIN':
+                self.x = tf.map_fn(lambda img: tf.image.random_flip_left_right(img), self.raw_x)
+                self.x = tf.pad(self.x, [[0, 0], [4, 4], [4, 4], [0, 0]], 'CONSTANT')
+                self.x = tf.map_fn(lambda img: tf.random_crop(img, [32, 32, 3]), self.x)
+            else:
+                self.x = self.raw_x
         
-        self.conv1_1 = conv_bn_relu('conv1_1', self.x, self.dim[0], self.phase, self.reg, dropout=self.dropout[0])
-        self.conv1_2 = conv_bn_relu('conv1_2', self.conv1_1, self.dim[1], self.phase, self.reg, dropout=self.dropout[1])
+        self.conv1_1 = conv_bn_relu('conv1_1', self.x, self.dim[0], self.phase, self.reg, dropout=self.dropout[0], if_bn=self.if_bn)
+        self.conv1_2 = conv_bn_relu('conv1_2', self.conv1_1, self.dim[1], self.phase, self.reg, dropout=self.dropout[1], if_bn=self.if_bn)
         self.pool1 = tf.nn.max_pool(self.conv1_2, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME', name='pool1')
 
-        self.conv2_1 = conv_bn_relu('conv2_1', self.pool1, self.dim[2], self.phase, self.reg, dropout=self.dropout[2])
-        self.conv2_2 = conv_bn_relu('conv2_2', self.conv2_1, self.dim[3], self.phase, self.reg, dropout=self.dropout[3])
+        self.conv2_1 = conv_bn_relu('conv2_1', self.pool1, self.dim[2], self.phase, self.reg, dropout=self.dropout[2], if_bn=self.if_bn)
+        self.conv2_2 = conv_bn_relu('conv2_2', self.conv2_1, self.dim[3], self.phase, self.reg, dropout=self.dropout[3], if_bn=self.if_bn)
         self.pool2 = tf.nn.max_pool(self.conv2_2, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME', name='pool2')
 
-        self.conv3_1 = conv_bn_relu('conv3_1', self.pool2, self.dim[4], self.phase, self.reg, dropout=self.dropout[4])
-        self.conv3_2 = conv_bn_relu('conv3_2', self.conv3_1, self.dim[5], self.phase, self.reg, dropout=self.dropout[5])
-        self.conv3_3 = conv_bn_relu('conv3_3', self.conv3_2, self.dim[6], self.phase, self.reg, dropout=self.dropout[6])
+        self.conv3_1 = conv_bn_relu('conv3_1', self.pool2, self.dim[4], self.phase, self.reg, dropout=self.dropout[4], if_bn=self.if_bn)
+        self.conv3_2 = conv_bn_relu('conv3_2', self.conv3_1, self.dim[5], self.phase, self.reg, dropout=self.dropout[5], if_bn=self.if_bn)
+        self.conv3_3 = conv_bn_relu('conv3_3', self.conv3_2, self.dim[6], self.phase, self.reg, dropout=self.dropout[6], if_bn=self.if_bn)
         self.pool3 = tf.nn.max_pool(self.conv3_3, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME', name='pool3')
 
-        self.conv4_1 = conv_bn_relu('conv4_1', self.pool3, self.dim[7], self.phase, self.reg, dropout=self.dropout[7])
-        self.conv4_2 = conv_bn_relu('conv4_2', self.conv4_1, self.dim[8], self.phase, self.reg, dropout=self.dropout[8])
-        self.conv4_3 = conv_bn_relu('conv4_3', self.conv4_2, self.dim[9], self.phase, self.reg, dropout=self.dropout[9])
+        self.conv4_1 = conv_bn_relu('conv4_1', self.pool3, self.dim[7], self.phase, self.reg, dropout=self.dropout[7], if_bn=self.if_bn)
+        self.conv4_2 = conv_bn_relu('conv4_2', self.conv4_1, self.dim[8], self.phase, self.reg, dropout=self.dropout[8], if_bn=self.if_bn)
+        self.conv4_3 = conv_bn_relu('conv4_3', self.conv4_2, self.dim[9], self.phase, self.reg, dropout=self.dropout[9], if_bn=self.if_bn)
         self.pool4 = tf.nn.max_pool(self.conv4_3, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME', name='pool4')
 
-        self.conv5_1 = conv_bn_relu('conv5_1', self.pool4, self.dim[10], self.phase, self.reg, dropout=self.dropout[10])
-        self.conv5_2 = conv_bn_relu('conv5_2', self.conv5_1, self.dim[11], self.phase, self.reg, dropout=self.dropout[11])
-        self.conv5_3 = conv_bn_relu('conv5_3', self.conv5_2, self.dim[12], self.phase, self.reg, dropout=self.dropout[12])
+        self.conv5_1 = conv_bn_relu('conv5_1', self.pool4, self.dim[10], self.phase, self.reg, dropout=self.dropout[10], if_bn=self.if_bn)
+        self.conv5_2 = conv_bn_relu('conv5_2', self.conv5_1, self.dim[11], self.phase, self.reg, dropout=self.dropout[11], if_bn=self.if_bn)
+        self.conv5_3 = conv_bn_relu('conv5_3', self.conv5_2, self.dim[12], self.phase, self.reg, dropout=self.dropout[12], if_bn=self.if_bn)
         self.pool5 = tf.nn.max_pool(self.conv5_3, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME', name='pool5')
 
         self.fc0 = layers.flatten(self.pool5)
@@ -57,8 +64,8 @@ class vgg:
         else:
             self.fc0_dropout = self.fc0
 
-        self.fc1 = fc_bn_relu('fc6', self.fc0_dropout, self.dim[13], self.phase, self.reg, dropout=self.dropout[14])
-        self.fc2 = fc_bn_relu('fc7', self.fc1, self.dim[14], self.phase, self.reg, dropout=self.dropout[15])
+        self.fc1 = fc_bn_relu('fc6', self.fc0_dropout, self.dim[13], self.phase, self.reg, dropout=self.dropout[14], if_bn=self.if_bn)
+        self.fc2 = fc_bn_relu('fc7', self.fc1, self.dim[14], self.phase, self.reg, dropout=self.dropout[15], if_bn=self.if_bn)
         
         with tf.variable_scope('y_w'):
             w = tf.get_variable('w', [self.dim[14], 10], tf.float32, layers.xavier_initializer(), self.reg)
@@ -84,7 +91,7 @@ class vgg:
             self.optimizer = tf.train.MomentumOptimizer(self.lr, momentum=0.9).minimize(self.loss, global_step=self.global_step)
 
     def partial_train(self, x, y, sess, writer, lr, record=True):
-        loss, _, summary = sess.run([self.loss, self.optimizer, self.summary], feed_dict={self.x: x, self.y_logit: y, self.lr: lr})
+        x, loss, _, summary = sess.run([self.x, self.loss, self.optimizer, self.summary], feed_dict={self.raw_x: x, self.y_logit: y, self.lr: lr})
         if record:
             writer.add_summary(summary, self.global_step.eval(sess))
         return loss

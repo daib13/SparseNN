@@ -2,9 +2,14 @@ import tensorflow as tf
 from tensorflow.contrib import layers
 import math
 import numpy as np
+from tensorlayer.layers import BatchNormLayer
 
 
 PROTECTOR = 0.00001
+
+
+def msra_initializer(n):
+    return tf.random_normal_initializer(0.0, math.sqrt(2. / n), dtype=tf.float32)
 
 
 def dense_l0(name, x, phase, output_channel, reg=None, bias=False, init_log_alpha=-2.3, beta=2.0/3.0, gamma=-0.1, zeta=1.1, activation_fn=None):
@@ -66,16 +71,18 @@ def conv_l0(name, x, phase, output_channel, kernel_size=3, reg=None, init_log_al
     return y, l0_penalty
 
 
-def conv_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None):
+def conv_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None, if_bn=True):
     is_train = (phase == 'TRAIN')
     input_channel = int(x.get_shape()[-1])
     assert len(x.get_shape()) == 4
     with tf.variable_scope(name + '_w'):
-        w = tf.get_variable('w', [3, 3, input_channel, output_channel], tf.float32, layers.xavier_initializer(), reg)
+        w = tf.get_variable('w', [3, 3, input_channel, output_channel], tf.float32, msra_initializer(9.0 * output_channel), reg)
         b = tf.get_variable('b', [output_channel], tf.float32, tf.zeros_initializer())
     with tf.name_scope(name):
         y = tf.nn.bias_add(tf.nn.conv2d(x, w, [1, 1, 1, 1], 'SAME'), b, name='conv')
-        y = layers.batch_norm(y)
+        if if_bn:
+            y = layers.batch_norm(y)
+            y = BatchNormLayer()
         y = tf.nn.relu(y, 'relu')
         if dropout is not None:
             if phase == 'TRAIN':
@@ -85,25 +92,27 @@ def conv_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None)
     return y
 
 
-def conv_l0_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, init_log_alpha=-2.3):
+def conv_l0_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, init_log_alpha=-2.3, if_bn=True):
     is_train = (phase == 'TRAIN')
     y, l0_penalty = conv_l0(name + '/conv', x, phase, output_channel, kernel_size=3, reg=reg, init_log_alpha=init_log_alpha)
     with tf.name_scope(name):
-        y = layers.batch_norm(y)
+        if if_bn:
+            y = layers.batch_norm(y)
         y = tf.nn.relu(y, 'relu')
     return y, l0_penalty
 
 
-def fc_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None):
+def fc_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None, if_bn=True):
     is_train = (phase == 'TRAIN')
     input_channel = int(x.get_shape()[-1])
     assert len(x.get_shape()) == 2
     with tf.variable_scope(name + '_w'):
-        w = tf.get_variable('w', [input_channel, output_channel], tf.float32, layers.xavier_initializer(), reg)
+        w = tf.get_variable('w', [input_channel, output_channel], tf.float32, msra_initializer(output_channel), reg)
         b = tf.get_variable('b', [output_channel], tf.float32, tf.zeros_initializer())
     with tf.name_scope(name):
         y = tf.nn.bias_add(tf.matmul(x, w), b, name='fc')
-        y = layers.batch_norm(y)
+        if if_bn:
+            y = layers.batch_norm(y)
         y = tf.nn.relu(y, 'relu')
         if dropout is not None:
             if phase == 'TRAIN':
@@ -113,11 +122,12 @@ def fc_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, dropout=None):
     return y
 
 
-def fc_l0_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, init_log_alpha=-2.3):
+def fc_l0_bn_relu(name, x, output_channel, phase='TRAIN', reg=None, init_log_alpha=-2.3, if_bn=True):
     is_train = (phase == 'TRAIN')
     y, l0_penalty = dense_l0(name + '/fc', x, phase, output_channel, reg, True, init_log_alpha)
     with tf.name_scope(name):
-        y = layers.batch_norm(y)
+        if if_bn:
+            y = layers.batch_norm(y)
         y = tf.nn.relu(y, 'relu')
     return y, l0_penalty
 
